@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>БК Support: Push-уведомления</title>
+    <style>
+        /* --- CSS Стили --- */
+        :root {
+            --primary: #008751;
+            --primary-dark: #006b3f;
+            --bg-body: #f0f2f5;
+            --bg-card: #ffffff;
+            --text-main: #1c1e21;
+            --text-muted: #65676b;
+            --border: #ced0d4;
+            --accent-red: #e41e3f;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1.6fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 850px) {
+            .container { grid-template-columns: 1fr; }
+        }
+
+        /* Header */
+        header {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        h1 { font-size: 22px; margin: 0; color: #333; }
+        .environment-badge {
+            background: #fff3cd;
+            color: #856404;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            border: 1px solid #ffeeba;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        h2 {
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-top: 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* Form Elements */
+        label { font-size: 13px; font-weight: 600; margin-bottom: 5px; display: block; }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            font-size: 14px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        input:focus, textarea:focus, select:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(0, 135, 81, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.2s;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        
+        .btn-outline { 
+            background: transparent; 
+            border: 1px solid var(--border); 
+            color: var(--text-main);
+        }
+        .btn-outline:hover { border-color: var(--text-main); }
+
+        /* Search Area */
+        .search-row { display: flex; gap: 10px; }
+        .search-row input { margin-bottom: 0; }
+
+        /* User Result Card */
+        #user-result {
+            margin-top: 20px;
+            border: 1px solid var(--border);
+            background: #f9fafb;
+            border-radius: 6px;
+            padding: 15px;
+            display: none; 
+        }
+        
+        #user-result.active { display: block; animation: fadeIn 0.3s; }
+
+        .user-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .user-login { font-size: 18px; font-weight: bold; }
+        
+        .user-meta { 
+            display: flex; 
+            gap: 15px; 
+            font-size: 14px; 
+            color: var(--text-muted);
+            align-items: center;
+        }
+        .user-meta span strong { color: var(--text-main); }
+
+        .vip-badge {
+            background: #ffedd5; color: #9a3412; padding: 2px 6px; border-radius: 4px; font-size: 11px; text-transform: uppercase;
+        }
+
+        /* Table */
+        .history-section { grid-column: 1 / -1; }
+        .table-wrapper { max-height: 400px; overflow-y: auto; border: 1px solid var(--border); border-radius: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        thead th { background: #f7f8fa; position: sticky; top: 0; padding: 12px; text-align: left; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+        tbody td { padding: 12px; border-bottom: 1px solid var(--border); }
+        tbody tr:hover { background: #f0f9f4; }
+
+        /* Notification Toast */
+        #toast {
+            visibility: hidden;
+            min-width: 300px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            bottom: 30px;
+            right: 30px;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+        #toast.success { border-left: 5px solid var(--primary); }
+        #toast.error { border-left: 5px solid var(--accent-red); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>📣 CRM: Отправка Push-уведомлений</h1>
+        <span class="environment-badge">TEST ENVIRONMENT</span>
+    </header>
+
+    <section class="card">
+        <h2>1. Поиск Игрока</h2>
+        <div class="search-row">
+            <input type="text" id="search-input" placeholder="ID аккаунта (например, 1029384)">
+            <button class="btn btn-primary" onclick="findUser()">Найти</button>
+        </div>
+        <small style="color: #888; margin-top: 5px;">Тестовые ID: 7483921, 1029384, 5566778...</small>
+
+        <div id="user-result">
+            <div class="user-header">
+                <div class="user-login" id="u-login">Login</div>
+                <span class="vip-badge" id="u-status">VIP</span>
+            </div>
+            <div class="user-meta">
+                <span>Имя игрока: <strong id="u-name">Name</strong></span>
+            </div>
+            <div style="margin-top: 15px; text-align: right;">
+                <button class="btn btn-outline" id="select-btn" onclick="selectUser()">Выбрать для отправки</button>
+            </div>
+        </div>
+        <div id="search-error" style="color: var(--accent-red); margin-top: 10px; display: none;">Игрок не найден</div>
+    </section>
+
+    <section class="card">
+        <h2>2. Параметры уведомления</h2>
+        <form onsubmit="event.preventDefault(); sendPush();">
+            
+            <label for="template-select">Быстрые шаблоны</label>
+            <select id="template-select" onchange="applyTemplate()">
+                <option value="">-- Выберите шаблон --</option>
+                <option value="win">✅ Ваша ставка выиграла</option>
+                <option value="withdraw">💸 Вывод средств одобрен</option>
+                <option value="bonus">🎁 Вам начислен фрибет</option>
+                <option value="kyc">⚠️ Требуется верификация</option>
+                <option value="top_match">⚽ Топ матч сегодня</option>
+            </select>
+
+            <label for="push-title">Заголовок</label>
+            <input type="text" id="push-title" placeholder="Важная информация">
+
+            <label for="push-text">Текст сообщения</label>
+            <textarea id="push-text" rows="4" placeholder="Введите текст уведомления..."></textarea>
+
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 12px; color: #888;">
+                    Переменные: <code>{{first_name}}</code>, <code>{{ticket_id}}</code>
+                </div>
+                <button type="submit" class="btn btn-primary">Отправить Push</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="card history-section">
+        <h2>История отправлений (Лог)</h2>
+        <div class="table-wrapper">
+            <table id="history-table">
+                <thead>
+                    <tr>
+                        <th width="15%">Время</th>
+                        <th width="15%">ID Игрока</th>
+                        <th>Текст уведомления</th>
+                        <th width="10%">Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>23.11.2025 14:30</td>
+                        <td>8839201</td>
+                        <td>Ваша ставка №4829 на матч "Челси - Арсенал" рассчитана выигрышем!</td>
+                        <td style="color:green; font-weight:bold;">Отправлено</td>
+                    </tr>
+                    <tr>
+                        <td>23.11.2025 12:15</td>
+                        <td>1029384</td>
+                        <td>Вывод средств на сумму 5000₽ успешно выполнен.</td>
+                        <td style="color:green; font-weight:bold;">Отправлено</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<div id="toast">Текст уведомления</div>
+
+<script>
+    // --- 1. База данных (без баланса) ---
+    const usersDB = [
+        { id: "1029384", name: "Александр В.", status: "VIP Platinum" },
+        { id: "7483921", name: "Дмитрий К.", status: "Новичок" },
+        { id: "5566778", name: "Елена С.", status: "Active" },
+        { id: "9988776", name: "Максим Г.", status: "Blocked" },
+        { id: "1234567", name: "Иван П.", status: "VIP Gold" },
+        { id: "8839201", name: "Сергей М.", status: "Active" },
+        { id: "3344556", name: "Ольга Т.", status: "Active" },
+        { id: "9012345", name: "Виктор Р.", status: "Новичок" },
+        { id: "6789012", name: "Андрей Л.", status: "Whale" },
+        { id: "3456789", name: "Павел О.", status: "Active" },
+        { id: "2345678", name: "Константин Ж.", status: "Active" },
+        { id: "8765432", name: "Мария Ш.", status: "Active" },
+        { id: "1122334", name: "Тимур З.", status: "VIP Gold" },
+        { id: "5544332", name: "Роман Д.", status: "Новичок" },
+        { id: "9900112", name: "Евгений Ц.", status: "Active" }
+    ];
+
+    let selectedUser = null;
+
+    // --- 2. Логика поиска ---
+    function findUser() {
+        const inputVal = document.getElementById('search-input').value.trim();
+        const resultBlock = document.getElementById('user-result');
+        const errorBlock = document.getElementById('search-error');
+        
+        const user = usersDB.find(u => u.id === inputVal);
+
+        if (user) {
+            document.getElementById('u-login').textContent = `ID: ${user.id}`;
+            document.getElementById('u-name').textContent = user.name;
+            document.getElementById('u-status').textContent = user.status;
+            // Строка с балансом удалена
+            
+            resultBlock.classList.add('active');
+            errorBlock.style.display = 'none';
+            
+            const btn = document.getElementById('select-btn');
+            btn.textContent = "Выбрать для отправки";
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-outline');
+            selectedUser = null;
+        } else {
+            resultBlock.classList.remove('active');
+            errorBlock.style.display = 'block';
+            selectedUser = null;
+        }
+    }
+
+    // --- 3. Логика выбора ---
+    function selectUser() {
+        const inputVal = document.getElementById('search-input').value.trim();
+        const user = usersDB.find(u => u.id === inputVal);
+        
+        if (user) {
+            selectedUser = user;
+            const btn = document.getElementById('select-btn');
+            btn.textContent = "✅ Пользователь выбран";
+            btn.classList.remove('btn-outline');
+            btn.classList.add('btn-primary');
+            showToast(`Игрок ${user.id} выбран`, 'success');
+        }
+    }
+
+    // --- 4. Шаблоны ---
+    function applyTemplate() {
+        const val = document.getElementById('template-select').value;
+        const titleField = document.getElementById('push-title');
+        const textField = document.getElementById('push-text');
+
+        switch(val) {
+            case 'win':
+                titleField.value = "Ваша ставка сыграла! 🏆";
+                textField.value = "Поздравляем, {{first_name}}! Ваша ставка рассчитана выигрышем.";
+                break;
+            case 'withdraw':
+                titleField.value = "Вывод средств одобрен 💸";
+                textField.value = "Средства успешно отправлены на вашу карту. Ожидайте зачисления банком.";
+                break;
+            case 'bonus':
+                titleField.value = "Вам начислен Фрибет 🔥";
+                textField.value = "Мы начислили вам бонус. Успейте поставить в течение 24 часов!";
+                break;
+            case 'kyc':
+                titleField.value = "Верификация аккаунта 🛂";
+                textField.value = "Пожалуйста, загрузите фото паспорта в личном кабинете для снятия ограничений.";
+                break;
+            case 'top_match':
+                titleField.value = "Суперматч сегодня! ⚽";
+                textField.value = "Реал Мадрид vs Барселона. Повышенные коэффициенты уже на сайте!";
+                break;
+            default:
+                titleField.value = "";
+                textField.value = "";
+        }
+    }
+
+    // --- 5. Отправка пуша ---
+    function sendPush() {
+        const title = document.getElementById('push-title').value;
+        const text = document.getElementById('push-text').value;
+
+        if (!selectedUser) {
+            showToast("Ошибка: Сначала выберите пользователя!", "error");
+            return;
+        }
+        if (!title || !text) {
+            showToast("Ошибка: Заполните заголовок и текст!", "error");
+            return;
+        }
+
+        const message = `[ТЕСТОВАЯ СРЕДА]\nВы успешно отправили PUSH для ID: ${selectedUser.id}\n\nТекст: "${text}"`;
+        
+        showToast("Уведомление успешно поставлено в очередь", "success");
+        addHistoryRow(selectedUser.id, text);
+        
+        setTimeout(() => {
+            alert(message);
+        }, 500);
+    }
+
+    function addHistoryRow(login, text) {
+        const table = document.getElementById('history-table').getElementsByTagName('tbody')[0];
+        const newRow = table.insertRow(0);
+        
+        const now = new Date();
+        const timeString = now.toLocaleDateString() + ' ' + now.toLocaleTimeString().slice(0,5);
+
+        newRow.innerHTML = `
+            <td>${timeString}</td>
+            <td>${login}</td>
+            <td>${text}</td>
+            <td style="color:green; font-weight:bold;">Отправлено</td>
+        `;
+    }
+
+    function showToast(message, type) {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = "show";
+        if (type === 'success') toast.classList.add('success');
+        if (type === 'error') toast.classList.add('error');
+        setTimeout(function(){ toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+</script>
+
+</body>
+</html>
